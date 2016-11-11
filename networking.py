@@ -10,10 +10,11 @@ _width = -1
 _height = -1
 
 def serializeMoveSet(moves):
-    returnString = ""
-    for move in moves:
-        returnString += str(move.loc.x) + " " + str(move.loc.y) + " " + str(move.direction) + " "
-    return returnString
+    return ''.join(
+        '{} {} {} '.format(move.loc.x, move.loc.y, move.direction)
+        for move in moves
+    )
+
 
 def deserializeMapSize(inputString):
     splitString = inputString.split(" ")
@@ -21,6 +22,7 @@ def deserializeMapSize(inputString):
     global _width, _height
     _width = int(splitString.pop(0))
     _height = int(splitString.pop(0))
+
 
 def deserializeProductions(inputString):
     splitString = inputString.split(" ")
@@ -31,8 +33,9 @@ def deserializeProductions(inputString):
             row.append(int(splitString.pop(0)))
         _productions.append(row)
 
+
 def deserializeMap(inputString):
-    splitString = inputString.split(" ")
+    splitString = iter(map(int, inputString.split(" ")))
 
     m = GameMap(_width, _height)
 
@@ -41,21 +44,22 @@ def deserializeMap(inputString):
     counter = 0
     owner = 0
     while y != m.height:
-        counter = int(splitString.pop(0))
-        owner = int(splitString.pop(0))
-        for a in range(0, counter):
+        counter = next(splitString)
+        owner = next(splitString)
+        for a in range(counter):
             m.contents[y][x].owner = owner
             x += 1
             if x == m.width:
                 x = 0
                 y += 1
 
-    for a in range(0, _height):
-        for b in range(0, _width):
-            m.contents[a][b].strength = int(splitString.pop(0))
+    for a in range(_height):
+        for b in range(_width):
+            m.contents[a][b].strength = next(splitString)
             m.contents[a][b].production = _productions[a][b]
 
     return m
+
 
 def sendString(toBeSent):
     toBeSent += '\n'
@@ -63,8 +67,10 @@ def sendString(toBeSent):
     sys.stdout.write(toBeSent)
     sys.stdout.flush()
 
+
 def getString():
     return sys.stdin.readline().rstrip('\n')
+
 
 def getInit():
     playerTag = int(getString())
@@ -74,11 +80,14 @@ def getInit():
 
     return (playerTag, m)
 
+
 def sendInit(name):
     sendString(name)
 
+
 def getFrame():
     return deserializeMap(getString())
+
 
 def sendFrame(moves):
     sendString(serializeMoveSet(moves))

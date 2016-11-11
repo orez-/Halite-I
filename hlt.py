@@ -1,6 +1,6 @@
-import random
+import collections
 import math
-import copy
+import random
 
 STILL = 0
 NORTH = 1
@@ -8,37 +8,53 @@ EAST = 2
 SOUTH = 3
 WEST = 4
 
-DIRECTIONS = [a for a in range(0, 5)]
-CARDINALS = [a for a in range(1, 5)]
+DIRECTIONS = list(range(0, 5))
+CARDINALS = list(range(1, 5))
 
 ATTACK = 0
 STOP_ATTACK = 1
 
-class Location:
-    def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
+
+Location = collections.namedtuple('Location', 'x y')
+
+
 class Site:
     def __init__(self, owner=0, strength=0, production=0):
         self.owner = owner
         self.strength = strength
         self.production = production
+
+
 class Move:
     def __init__(self, loc=0, direction=0):
         self.loc = loc
         self.direction = direction
 
+
 class GameMap:
-    def __init__(self, width = 0, height = 0, numberOfPlayers = 0):
+    def __init__(self, width=0, height=0, numberOfPlayers=0):
         self.width = width
         self.height = height
-        self.contents = []
 
-        for y in range(0, self.height):
-            row = []
-            for x in range(0, self.width):
-                row.append(Site(0, 0, 0))
-            self.contents.append(row)
+        self.contents = [
+            [Site(0, 0, 0) for _ in range(self.width)]
+            for _ in range(self.height)
+        ]
+
+    def __iter__(self):
+        for y, row in enumerate(self.contents):
+            for x, elem in enumerate(row):
+                yield Location(x, y), elem
+
+    def neighbors(self, loc):
+        gen = (
+            (direction, self.getLocation(Location(*loc), direction))
+            for direction in random.sample(CARDINALS, len(CARDINALS))
+        )
+        return (
+            (direction, location, self.getSite(location))
+            for direction, location in gen
+        )
 
     def inBounds(self, l):
         return l.x >= 0 and l.x < self.width and l.y >= 0 and l.y < self.height
@@ -68,29 +84,30 @@ class GameMap:
         return math.atan2(dy, dx)
 
     def getLocation(self, loc, direction):
-        l = copy.deepcopy(loc)
+        x, y = loc
         if direction != STILL:
             if direction == NORTH:
-                if l.y == 0:
-                    l.y = self.height - 1
+                if y == 0:
+                    y = self.height - 1
                 else:
-                    l.y -= 1
+                    y -= 1
             elif direction == EAST:
-                if l.x == self.width - 1:
-                    l.x = 0
+                if x == self.width - 1:
+                    x = 0
                 else:
-                    l.x += 1
+                    x += 1
             elif direction == SOUTH:
-                if l.y == self.height - 1:
-                    l.y = 0
+                if y == self.height - 1:
+                    y = 0
                 else:
-                    l.y += 1
+                    y += 1
             elif direction == WEST:
-                if l.x == 0:
-                    l.x = self.width - 1
+                if x == 0:
+                    x = self.width - 1
                 else:
-                    l.x -= 1
-        return l
-    def getSite(self, l, direction = STILL):
+                    x -= 1
+        return Location(x, y)
+
+    def getSite(self, l, direction=STILL):
         l = self.getLocation(l, direction)
         return self.contents[l.y][l.x]
