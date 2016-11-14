@@ -25,14 +25,13 @@ def deserializeMapSize(inputString):
 
 
 def deserializeProductions(inputString):
-    splitString = inputString.split(" ")
+    splitString = iter(map(int, inputString.split(" ")))
 
-    for a in range(0, _height):
-        row = []
-        for b in range(0, _width):
-            row.append(int(splitString.pop(0)))
-        _productions.append(row)
-
+    global _productions
+    _productions = [
+        [next(splitString) for _ in range(_width)]
+        for _ in range(_height)
+    ]
 
 def deserializeMap(inputString):
     splitString = iter(map(int, inputString.split(" ")))
@@ -41,22 +40,31 @@ def deserializeMap(inputString):
 
     y = 0
     x = 0
-    counter = 0
-    owner = 0
+    owners = []
+    row = []
     while y != m.height:
         counter = next(splitString)
         owner = next(splitString)
-        for a in range(counter):
-            m.contents[y][x].owner = owner
-            x += 1
-            if x == m.width:
-                x = 0
-                y += 1
 
-    for a in range(_height):
-        for b in range(_width):
-            m.contents[a][b].strength = next(splitString)
-            m.contents[a][b].production = _productions[a][b]
+        left_in_row = m.width - x
+        if left_in_row <= counter:
+            counter -= left_in_row
+            owners.append(row + [owner] * left_in_row)
+            num_rows, x = divmod(counter, m.width)
+            # as a temp read-only structure, same-reference is fine
+            owners += [[owner] * m.width] * num_rows
+            row = [owner] * x
+            y += num_rows + 1
+        else:
+            x += counter
+            row += [owner] * counter
+
+    m.contents = [
+        [
+            Site(owner=owner, strength=next(splitString), production=_productions[a][b])
+            for b, owner in enumerate(owner_row)
+        ] for a, owner_row in enumerate(owners)
+    ]
 
     return m
 
