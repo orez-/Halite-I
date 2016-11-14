@@ -38,32 +38,30 @@ def deserializeMap(inputString):
 
     m = GameMap(_width, _height)
 
-    y = 0
-    x = 0
+    # We actualize the owners list so we can join it with the strength
+    # list from the same stream, but we leave it in its compressed format
+    remaining = _width * _height
     owners = []
-    row = []
-    while y != m.height:
+    while remaining:
         counter = next(splitString)
         owner = next(splitString)
+        owners.append((counter, owner))
+        remaining -= counter
 
-        left_in_row = m.width - x
-        if left_in_row <= counter:
-            counter -= left_in_row
-            owners.append(row + [owner] * left_in_row)
-            num_rows, x = divmod(counter, m.width)
-            # as a temp read-only structure, same-reference is fine
-            owners += [[owner] * m.width] * num_rows
-            row = [owner] * x
-            y += num_rows + 1
-        else:
-            x += counter
-            row += [owner] * counter
+    owners_iter = (
+        owner
+        for counter, owner in owners
+        for _ in range(counter)
+    )
 
     m.contents = [
         [
-            Site(owner=owner, strength=next(splitString), production=_productions[a][b])
-            for b, owner in enumerate(owner_row)
-        ] for a, owner_row in enumerate(owners)
+            Site(
+                owner=next(owners_iter),
+                strength=next(splitString),
+                production=production,
+            ) for production in production_row
+        ] for production_row in _productions
     ]
 
     return m
