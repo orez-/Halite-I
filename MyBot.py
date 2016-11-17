@@ -147,7 +147,10 @@ def troops_to_mobilize(gameMap, target, myID, seen=()):
         for direction, loc, next_site in neighbors:
             queue.append((reverse(direction), loc, next_site, distance + 1))
             seen.add(loc)
-    return None  # Everyone just take a minute.
+
+    troops[max_distance + 1] = {}
+    del troops[0]
+    return troops
 
 
 def opponent_near_units(gameMap, unit, myID):
@@ -172,25 +175,22 @@ def starting_turn(gameMap, myID):
         loc, site = loc_site
         return site.production / (site.strength or 0.1)
 
-    # This function sort of makes the assumption that your units are contiguous.
-    # If you're small enough to trigger this and you have two groups
-    # of units, you have bigger problems.
     units = dict(gameMap.units(myID))
-    moved_troops = []
+    moved_troops = set()
+
+    # This function sort of makes the assumption that your units are contiguous.
+    # If you're running this and you have two groups of units, you have bigger problems.
+    any_unit_loc = next(iter(units))
+    edges = iter(sorted(find_edges(gameMap, any_unit_loc, myID), key=_edge_score, reverse=True))
 
     while units:
-        # if none of your edges are weak, send reinforcements
-        any_unit_loc = next(iter(units))
-        edges = list(find_edges(gameMap, any_unit_loc, myID, moved_troops))
-
-        if not edges:
-            break
-
         # pick the spot that will pay for itself the soonest.
-        target = max(edges, key=_edge_score)
+        target = next(edges, None)
+        if not target:
+            break
         troop_waves = troops_to_mobilize(gameMap, target, myID, moved_troops)
         if not troop_waves:
-            break
+            continue
 
         # The team who should move
         mobile_battalion = max(troop_waves)
@@ -198,7 +198,7 @@ def starting_turn(gameMap, myID):
         for i, wave in troop_waves.items():
             for loc, direction in wave.items():
                 yield loc, direction if mobile_battalion == i else hlt.STILL
-                moved_troops.append(loc)
+                moved_troops.add(loc)
                 del units[loc]
 
     for loc in units:
