@@ -133,9 +133,21 @@ def troops_to_mobilize(gameMap, target, myID, seen=()):
     return None  # Everyone just take a minute.
 
 
-def turn(gameMap, myID):
+def opponent_near_units(gameMap, unit, myID):
+    return any(
+        site.owner and site.owner != myID
+        for loc, _ in find_edges(gameMap, unit, myID)
+        for _, _, site in gameMap.neighbors(loc)
+    )
+
+
+def turn(gameMap, myID, state):
+    unit_loc, _ = next(iter(gameMap.units(myID)))
+    if state['seen_combat'] or opponent_near_units(gameMap, unit_loc, myID):
+        state['seen_combat'] = True
+        return std_turn(gameMap, myID)
+
     return starting_turn(gameMap, myID)
-    # return std_turn(gameMap, myID)
 
 
 def starting_turn(gameMap, myID):
@@ -218,6 +230,9 @@ def std_turn(gameMap, myID):
 
 
 def main():
+    state = {
+        'seen_combat': False,
+    }
     myID, gameMap = networking.getInit()
     networking.sendInit("Orez[Miner]")
 
@@ -228,7 +243,7 @@ def main():
                 hlt.Location(x, y),
                 direction,
             )
-            for (x, y), direction in turn(gameMap, myID)
+            for (x, y), direction in turn(gameMap, myID, state)
         ]
         networking.sendFrame(moves)
 
