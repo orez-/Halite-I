@@ -106,14 +106,31 @@ def troops_to_mobilize(gameMap, target, myID, seen=()):
     troops = collections.defaultdict(dict)
     seen = {loc} | set(seen)
 
-    queue = collections.deque([(None, loc, 0, 0)])
+    fake_site = hlt.Site(owner=0, strength=0, production=0)
+    queue = collections.deque([(None, loc, fake_site, 0)])
+    max_distance = 0
+    total_production = 0
 
     while queue:
-        # TODO: YOU CAN IMPROVE THIS BY DEALING A PRODUCTION'S WORTH OF
-        # STRENGTH DAMAGE WHEN YOU EXPAND A BATTALION
-        direction, location, strength, distance = queue.popleft()
-        target_strength -= strength
+        direction, location, site, distance = queue.popleft()
+
+        # When we need to call in another layer of battalion,
+        # everyone else gets another turn to produce.
+        if distance > max_distance:
+            max_distance = distance
+            target_strength -= total_production
+
+            if target_strength < 0:
+                # We add an empty set here to denote that everyone else
+                # should wait.
+                troops[distance] = {}
+                _log.info("the troops: %s", troops)
+                del troops[0]
+                return troops
+
+        target_strength -= site.strength
         troops[distance][location] = direction
+        total_production += site.production
 
         if target_strength < 0:
             _log.info("the troops: %s", troops)
@@ -128,7 +145,7 @@ def troops_to_mobilize(gameMap, target, myID, seen=()):
 
 
         for direction, loc, next_site in neighbors:
-            queue.append((reverse(direction), loc, next_site.strength, distance + 1))
+            queue.append((reverse(direction), loc, next_site, distance + 1))
             seen.add(loc)
     return None  # Everyone just take a minute.
 
