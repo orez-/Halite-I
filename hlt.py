@@ -54,9 +54,12 @@ class GameMap:
 
         for loc, direction in moves:
             site = self.getSite(loc)
-            difference[loc] -= site.strength
-            next_loc = self.getLocation(loc, direction)
-            difference[next_loc] += site.strength
+            if direction == STILL:
+                difference[loc] += site.production
+            else:
+                difference[loc] -= site.strength
+                next_loc = self.getLocation(loc, direction)
+                difference[next_loc] += site.strength
 
         def apply_diff(site, amt):
             strength = 0
